@@ -41,11 +41,11 @@ SerialLogHandler logHandler(LOG_LEVEL_INFO);
 
 // setup() runs once, when the device is first turned on
 void setup() {
-  // Put initialization like pinMode and begin functions here
-  pinMode(A0, INPUT); // Force Sensor pin
-  Serial.begin(9600);
+    // Put initialization like pinMode and begin functions here
+    pinMode(A0, INPUT); // Force Sensor pin
+    Serial.begin(9600);
 
-  client.connect("myID");
+    client.connect("myID");
     // Initialize MQTT connection
     if (client.isConnected()) {
         Serial.println("Connected to MQTT broker!");
@@ -53,24 +53,24 @@ void setup() {
     } else {
         Serial.println("Failed to connect to MQTT broker.");
     }
-  Wire.begin();
-  // Wake up the sensor
-  Wire.beginTransmission(ICM20600_ADDR);
-Wire.write(0x6B);  // Power management register
+    Wire.begin();
+    // Wake up the sensor
+    Wire.beginTransmission(ICM20600_ADDR);
+    Wire.write(0x6B);  // Power management register
     Wire.write(0x00);  // Wake up
     Wire.endTransmission();
 }
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
-  // The core of your code will likely live here.
+    // The core of your code will likely live here.
 
-  int forceSensorAnalogMeasurement = analogRead(A0);
-  // String message = String(forceSensorAnalogMeasurement);
-  unsigned char byte = static_cast<unsigned char>(forceSensorAnalogMeasurement);
-  String message;
+    int forceSensorAnalogMeasurement = analogRead(A0);
+    // String message = String(forceSensorAnalogMeasurement);
+    unsigned char byte = static_cast<unsigned char>(forceSensorAnalogMeasurement);
+    String message;
 
-   // Read accelerometer data
+    // Read accelerometer data
     Wire.beginTransmission(ICM20600_ADDR);
     Wire.write(0x3B);  // Starting register for accelerometer data
 
@@ -80,32 +80,35 @@ void loop() {
     int16_t ax = (Wire.read() << 8) | Wire.read();
     int16_t ay = (Wire.read() << 8) | Wire.read();
     int16_t az = (Wire.read() << 8) | Wire.read();
- 
 
-  message.concat(forceSensorAnalogMeasurement);
-  message.concat(";");
-  message.concat(ax);
+    message.concat(forceSensorAnalogMeasurement);
+    message.concat(";");
+    message.concat(ax);
+    message.concat(";");
+    message.concat(ay);
+    message.concat(";");
+    message.concat(az);
 
-  // data = "s;forcesensor;x;y;z;e"
+    // data = "s;forcesensor;x;y;z;e"
 
-  // Ensure the client stays connected
-  if (client.isConnected()) {
-      // Handle MQTT tasks (e.g., receiving messages)
-      digitalWrite(D7,HIGH);
-      // Periodically publish a message
-      static unsigned long lastPublish = 0;
-      if (millis() - lastPublish > 1000) { // Publish every 2 seconds
-          client.publish("outTopic/message", message);
-          // Serial.println("Published 'ciao' to 'outTopic/message'");
-          lastPublish = millis();
-      }
-  } else {
-      // Reconnect if the client is disconnected
-      digitalWrite(D7,LOW);
-      Serial.println("MQTT client disconnected. Reconnecting...");
-      client.connect("myID");
+    // Ensure the client stays connected
+    if (client.isConnected()) {
+        // Handle MQTT tasks (e.g., receiving messages)
+        digitalWrite(D7, HIGH);
+        // Periodically publish a message
+        static unsigned long lastPublish = 0;
+        if (millis() - lastPublish > 1000) { // Publish every 2 seconds
+            client.publish("outTopic/message", message);
+            // Serial.println("Published 'ciao' to 'outTopic/message'");
+            lastPublish = millis();
+        }
+    } else {
+        // Reconnect if the client is disconnected
+        digitalWrite(D7, LOW);
+        Serial.println("MQTT client disconnected. Reconnecting...");
+        client.connect("myID");
 
-  }
-  
-  client.loop(); 
+    }
+
+    client.loop(); 
 }
