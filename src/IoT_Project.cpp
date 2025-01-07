@@ -22,6 +22,8 @@ SerialLogHandler logHandler(LOG_LEVEL_INFO);
 // setup() runs once, when the device is first turned on
 void setup() {
   // Put initialization like pinMode and begin functions here
+  pinMode(A0, INPUT); // Force Sensor pin
+  Serial.begin(9600);
 }
 
 // loop() runs over and over again, as quickly as it can execute.
@@ -32,4 +34,7 @@ void loop() {
   // Log.info("Sending Hello World to the cloud!");
   // Particle.publish("Hello world!");
   // delay( 10 * 1000 ); // milliseconds and blocking - see docs for more info!
+  int forceSensorAnalogMeasurement = analogRead(A0);
+  Serial.println(forceSensorAnalogMeasurement);
+  delay(500);
 }
