@@ -4,5 +4,14 @@
     "files.associations": {
         "*.ino": "cpp"
     },
+    "configurations": [
+        {
+            "name": "Libraries",
+            "includePath": [
+                "${default}",
+                "/lib/"
+            ]
+        }
+    ],
     "particle.targetDevice": "DEV4"
 }
