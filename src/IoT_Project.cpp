@@ -12,6 +12,7 @@
 #include "Particle.h"
 #include "MQTT.h"
 #include "Wire.h"
+#include "string.h"
 
 #define ICM20600_ADDR 0x69  // Default I²C address
 
@@ -27,13 +28,48 @@ void callback(char* topic, byte* payload, unsigned int length) {
  
 }
 
+// // Compressing algorithm
+// String compress(int val){
+//   String newVal;
+
+//   char data3;
+//   if(val<0){
+//     val = abs(val);
+//     data3 = '-';
+//   }
+//   else{
+//     data3 = '+';
+//   }
+
+//   char data1 = val & 0xFF;
+//   char data2 = val >> 8;
+//   newVal.concat(data1);
+//   newVal.concat(data2);
+//   newVal.concat(data3);
+
+//   return newVal;
+// } 
+
 // Compressing algorithm
-uint8_t* compress(int val){
-  uint8_t newVal[2];
+char* compress(int val){
+  char* newVal;
+  newVal = (char*)malloc(sizeof(char)*3);
+
+  if(val<0){
+    val = abs(val);
+    newVal[2] = '-';
+  }
+  else{
+    newVal[2] = '+';
+  }
+
   newVal[0] = val & 0xFF;
   newVal[1] = val >> 8;
+
   return newVal;
 } 
+
+
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
@@ -72,9 +108,8 @@ void loop() {
     // The core of your code will likely live here.
 
     int forceSensorAnalogMeasurement = analogRead(A0);
-    // String message = String(forceSensorAnalogMeasurement);
-    unsigned char byte = static_cast<unsigned char>(forceSensorAnalogMeasurement);
     String message;
+    // char message[15]="ub"; //ub**+**+**+**+q
 
     // Read accelerometer data
     Wire.beginTransmission(ICM20600_ADDR);
@@ -86,12 +121,15 @@ void loop() {
     int16_t ax = (Wire.read() << 8) | Wire.read();
     int16_t ay = (Wire.read() << 8) | Wire.read();
     int16_t az = (Wire.read() << 8) | Wire.read();
+    
+    // // always out of heap memory, idk why
+    // strcat(message,compress(forceSensorAnalogMeasurement));
+    // strcat(message,compress(ax));
+    // strcat(message,compress(ay));
+    // strcat(message,compress(az));
+    // strcat(message,"q");
 
-    // Out of heap
-    // uint8_t* m1 = compress(4900);
 
-    // message.concat(m1[0]);
- 
     message.concat("s");
     message.concat(";");
     message.concat(forceSensorAnalogMeasurement);
