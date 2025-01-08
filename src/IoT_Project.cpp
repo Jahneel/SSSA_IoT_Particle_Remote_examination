@@ -81,10 +81,17 @@ void loop() {
     int16_t ay = (Wire.read() << 8) | Wire.read();
     int16_t az = (Wire.read() << 8) | Wire.read();
  
-
+  message.concat("s");
+  message.concat(";");
   message.concat(forceSensorAnalogMeasurement);
   message.concat(";");
   message.concat(ax);
+  message.concat(";");
+  message.concat(ay);
+  message.concat(";");
+  message.concat(az);
+  message.concat(";");
+  message.concat("e");
 
   // data = "s;forcesensor;x;y;z;e"
 
