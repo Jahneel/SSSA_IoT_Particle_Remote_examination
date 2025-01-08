@@ -27,7 +27,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
  
 }
 
-// 
+// Compressing algorithm
+uint8_t* compress(int val){
+  uint8_t newVal[2];
+  newVal[0] = val & 0xFF;
+  newVal[1] = val >> 8;
+  return newVal;
+} 
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
@@ -80,6 +86,11 @@ void loop() {
     int16_t ax = (Wire.read() << 8) | Wire.read();
     int16_t ay = (Wire.read() << 8) | Wire.read();
     int16_t az = (Wire.read() << 8) | Wire.read();
+
+    // Out of heap
+    // uint8_t* m1 = compress(4900);
+
+    // message.concat(m1[0]);
  
     message.concat("s");
     message.concat(";");
