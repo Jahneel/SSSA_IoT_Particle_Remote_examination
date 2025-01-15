@@ -21,6 +21,20 @@ float ax_offset = 0;
 float ay_offset = 0;
 float az_offset = 0;
 
+// Kalman filter variables
+float ax_kalman = 0, ay_kalman = 0, az_kalman = 0;
+float P[3] = {1, 1, 1};  // Initial estimate error covariance
+float Q = 0.1;  // Process noise covariance
+float R = 0.1;  // Measurement noise covariance
+
+// Function to set accelerometer full-scale range
+void setAccelRange(uint8_t range) {
+    Wire.beginTransmission(ICM20600_ADDR);
+    Wire.write(0x1C);  // ACCEL_CONFIG register
+    Wire.write(range << 3);  // Set the full-scale range
+    Wire.endTransmission();
+}
+
 // Function to read raw accelerometer data
 void readAccelerometer(int16_t &ax, int16_t &ay, int16_t &az) {
     Wire.beginTransmission(ICM20600_ADDR);
@@ -51,6 +65,25 @@ void calibrateAccelerometer() {
     az_offset = az_sum / num_samples;
 }
 
+// Kalman filter function
+float kalmanFilter(float measurement, float &estimate, float &P) {
+    // Prediction step
+    P += Q;
+
+    // Update step
+    float K = P / (P + R);  // Kalman gain
+    estimate += K * (measurement - estimate);
+    P *= (1 - K);
+
+    return estimate;
+}
+
+
+// Function to convert raw accelerometer data to m/s²
+float convertToMS2(int16_t rawValue, float sensitivity) {
+    return (rawValue / sensitivity) * 9.80665;
+}
+
 // MQTT client and callback setup
 void callback(char* topic, byte* payload, unsigned int length);
 MQTT client("test.mosquitto.org", 1883, callback);
@@ -62,53 +95,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     p[length] = NULL;            // Null-terminate the string
  
 }
-
-// // Compressing algorithm
-// String compress(int val){
-//   String newVal;
-
-//   char data3;
-//   if(val<0){
-//     val = abs(val);
-//     data3 = '-';
-//   }
-//   else{
-//     data3 = '+';
-//   }
-
-//   char data1 = val & 0xFF;
-//   char data2 = val >> 8;
-//   newVal.concat(data1);
-//   newVal.concat(data2);
-//   newVal.concat(data3);
-
-//   return newVal;
-// } 
-
-// Compressing algorithm
-char* compress(int val){
-  char* newVal;
-  newVal = (char*)malloc(sizeof(char)*3);
-
-  if(val<0){
-    val = abs(val);
-    newVal[2] = '-';
-  }
-  else{
-    newVal[2] = '+';
-  }
-
-  newVal[0] = val & 0xFF;
-  newVal[1] = val >> 8;
-
-  return newVal;
-} 
-
-// Function to convert raw accelerometer data to m/s²
-float convertToMS2(int16_t rawValue, float sensitivity) {
-    return (rawValue / sensitivity) * 9.80665;
-}
-
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(AUTOMATIC);
@@ -141,6 +127,13 @@ void setup() {
     Wire.write(0x00);  // Wake up
     Wire.endTransmission();
 
+    // Sensitivity range
+    // 0x00 for ±2g
+    // 0x01 for ±4g
+    // 0x02 for ±8g
+    // 0x03 for ±16g
+    setAccelRange(0x03); 
+
     // Calibrate accelerometer
     calibrateAccelerometer();
 }
@@ -150,54 +143,37 @@ void loop() {
     // The core of your code will likely live here.
 
     int forceSensorAnalogMeasurement = analogRead(A0);
+    int force = map(forceSensorAnalogMeasurement,0,4095,0,100);
     String message;
-    // char message[15]="ub"; //ub**+**+**+**+q
 
-    // Read accelerometer data
-    // Wire.beginTransmission(ICM20600_ADDR);
-    // Wire.write(0x3B);  // Starting register for accelerometer data
-
-    // Wire.endTransmission(false);
-    // Wire.requestFrom(ICM20600_ADDR, 6);  // Request 6 bytes (X, Y, Z)
-
-    // int16_t ax = (Wire.read() << 8) | Wire.read();
-    // int16_t ay = (Wire.read() << 8) | Wire.read();
-    // int16_t az = (Wire.read() << 8) | Wire.read();
     int16_t ax, ay, az;
     readAccelerometer(ax, ay, az);
 
-    // Apply calibration offsets
-    ax -= ax_offset;
-    ay -= ay_offset;
-    az -= az_offset;
+    // Apply Kalman filter
+    ax_kalman = kalmanFilter(ax, ax_kalman, P[0]);
+    ay_kalman = kalmanFilter(ay, ay_kalman, P[1]);
+    az_kalman = kalmanFilter(az, az_kalman, P[2]);
+
+    // Ranges 
+    // ±2g: 16384.0
+    // ±4g: 8192.0
+    // ±8g: 4096.0
+    // ±16g: 2048.0
 
     // Convert raw values to m/s²
-    float ax_ms2 = convertToMS2(ax, 16384.0); // Assuming ±2g range
-    float ay_ms2 = convertToMS2(ay, 16384.0); // Assuming ±2g range
-    float az_ms2 = convertToMS2(az, 16384.0); // Assuming ±2g range
+    float ax_ms2 = convertToMS2(ax_kalman, 2048.0); // Assuming ±2g range
+    float ay_ms2 = convertToMS2(ay_kalman, 2048.0); // Assuming ±2g range
+    float az_ms2 = convertToMS2(az_kalman, 2048.0); // Assuming ±2g range
 
-    
-    // // always out of heap memory, idk why
-    // strcat(message,compress(forceSensorAnalogMeasurement));
-    // strcat(message,compress(ax));
-    // strcat(message,compress(ay));
-    // strcat(message,compress(az));
-    // strcat(message,"q");
-
-
-    message.concat("s");
-    message.concat(";");
-    message.concat(forceSensorAnalogMeasurement);
+    message.concat("s;");
+    message.concat(force);
     message.concat(";");
     message.concat(ax_ms2);
     message.concat(";");
     message.concat(ay_ms2);
     message.concat(";");
     message.concat(az_ms2);
-    message.concat(";");
-    message.concat("e");
-
-    // data = "s;forcesensor;x;y;z;e"
+    message.concat(";e");
 
     // Ensure the client stays connected
     if (client.isConnected()) {
@@ -205,7 +181,7 @@ void loop() {
         digitalWrite(D7, HIGH);
         // Periodically publish a message
         static unsigned long lastPublish = 0;
-        if (millis() - lastPublish > 1000) { // Publish every 2 seconds
+        if (millis() - lastPublish > 100) { // Publish every 2 seconds
             client.publish("outTopic/message", message);
             // Serial.println("Published 'ciao' to 'outTopic/message'");
             lastPublish = millis();
