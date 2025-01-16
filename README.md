@@ -4,6 +4,11 @@ This firmware project was created using [Particle Developer Tools](https://www.p
 
 Feel free to replace this README.md file with your own content, or keep it for reference.
 
+## MQTT Data Retrieval
+```
+& "C:\Program Files\mosquitto\mosquitto_sub" -h test.mosquitto.org -p 1883 -t outTopic/message
+```
+
 ## Table of Contents
 - [Introduction](#introduction)
 - [Prerequisites To Use This Template](#prerequisites-to-use-this-repository)
