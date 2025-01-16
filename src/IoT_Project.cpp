@@ -1,12 +1,10 @@
 /* 
- * Project myProject
- * Author: Your Name
- * Date: 
+ * Project: medubiq
+ * Author: syauqibilfaqih, jahneel, akshayraj-09
+ * Date: 07-01-2025
  * For comprehensive documentation and examples, please visit:
  * https://docs.particle.io/firmware/best-practices/firmware-template/
  */
-
-// Windows PowerShell [& "C:\Program Files\mosquitto\mosquitto_sub" -h test.mosquitto.org -p 1883 -t outTopic/message]
 
 // Include Particle Device OS APIs
 #include "Particle.h"
@@ -84,10 +82,6 @@ float convertToMS2(int16_t rawValue, float sensitivity) {
     return (rawValue / sensitivity) * 9.80665;
 }
 
-// MQTT client and callback setup
-void callback(char* topic, byte* payload, unsigned int length);
-MQTT client("test.mosquitto.org", 1883, callback);
-
 // Callback function (called when a message is received)
 void callback(char* topic, byte* payload, unsigned int length) {
     char p[length + 1];          // Create a buffer for the message
@@ -105,6 +99,9 @@ SYSTEM_THREAD(ENABLED);
 // Show system, cloud connectivity, and application logs over USB
 // View logs with CLI using 'particle serial monitor --follow'
 SerialLogHandler logHandler(LOG_LEVEL_INFO);
+
+// MQTT Client
+MQTT client("test.mosquitto.org", 1883, callback);
 
 // setup() runs once, when the device is first turned on
 void setup() {
@@ -161,9 +158,9 @@ void loop() {
     // ±16g: 2048.0
 
     // Convert raw values to m/s²
-    float ax_ms2 = convertToMS2(ax_kalman, 2048.0); // Assuming ±2g range
-    float ay_ms2 = convertToMS2(ay_kalman, 2048.0); // Assuming ±2g range
-    float az_ms2 = convertToMS2(az_kalman, 2048.0); // Assuming ±2g range
+    float ax_ms2 = convertToMS2(ax_kalman, 2048.0); 
+    float ay_ms2 = convertToMS2(ay_kalman, 2048.0); 
+    float az_ms2 = convertToMS2(az_kalman, 2048.0); 
 
     message.concat("s;");
     message.concat(force);
@@ -179,22 +176,22 @@ void loop() {
     if (client.isConnected()) {
         // Handle MQTT tasks (e.g., receiving messages)
         digitalWrite(D7, HIGH);
+
         // Periodically publish a message
         static unsigned long lastPublish = 0;
-        if (millis() - lastPublish > 100) { // Publish every 2 seconds
+
+        // Publish every 100 ms
+        if (millis() - lastPublish > 100) { 
             client.publish("outTopic/message", message);
-            // Serial.println("Published 'ciao' to 'outTopic/message'");
             lastPublish = millis();
         }
-    } else {
+    } 
+    else{
         // Reconnect if the client is disconnected
         digitalWrite(D7, LOW);
         Serial.println("MQTT client disconnected. Reconnecting...");
         client.connect("myID");
-
     }
 
     client.loop(); 
 }
-
-// comment 
