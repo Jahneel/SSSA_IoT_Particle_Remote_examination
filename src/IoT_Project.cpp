@@ -1,6 +1,6 @@
 /* 
  * Project: medubiq
- * Author: syauqibilfaqih, jahneel, akshayraj-09
+ * Author: jahneel, syauqibilfaqih, akshayraj-09
  * Date: 07-01-2025
  * For comprehensive documentation and examples, please visit:
  * https://docs.particle.io/firmware/best-practices/firmware-template/
